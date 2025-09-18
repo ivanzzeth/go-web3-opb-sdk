@@ -28,6 +28,10 @@ type UserListRequest struct {
 }
 
 type UserListResponse struct {
-	Data       []*User                 `json:"data"`
-	Pagination *PaginationResponse     `json:"pagination"`
+	Data       []*User             `json:"data"`
+	Pagination *PaginationResponse `json:"pagination"`
+}
+
+type UserCreateRequest struct {
+	EthAddress string `json:"eth_address"`
 }

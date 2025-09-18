@@ -1,6 +1,7 @@
 package web3opb
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -93,6 +94,35 @@ func (c *Client) UserGetEthWallets(id uint64) ([]*model.UserEthWallet, error) {
 	}
 
 	return userEthWalletsResp.Data, nil
+}
+
+func (c *Client) UserCreate(createReq *model.UserCreateRequest) (uint64, error) {
+	url := fmt.Sprintf("%s/api/%s/users", c.baseURL, c.version)
+	jsonReq, err := json.Marshal(createReq)
+	if err != nil {
+		return 0, err
+	}
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonReq))
+	if err != nil {
+		return 0, err
+	}
+	req.Header.Set("Authorization", "Bearer "+c.GetCachedJwtToken())
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+
+	var userCreateResp model.APIResponse[uint64]
+	err = json.NewDecoder(resp.Body).Decode(&userCreateResp)
+	if err != nil {
+		return 0, err
+	}
+	if userCreateResp.ApiError.HasError() {
+		return 0, userCreateResp.ApiError
+	}
+	return userCreateResp.Data, nil
 }
 
 func (c *Client) UserList(listReq *model.UserListRequest) (*model.UserListResponse, error) {

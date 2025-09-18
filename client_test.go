@@ -2,6 +2,7 @@ package web3opb
 
 import (
 	"encoding/hex"
+	"os"
 	"strconv"
 	"testing"
 	"time"
@@ -113,4 +114,78 @@ func TestClient_SignIn(t *testing.T) {
 	assert.NotEmpty(t, cachedJwtToken)
 	assert.NotEqual(t, jwtToken, cachedJwtToken)
 	assert.NotEqual(t, originJwtToken, cachedJwtToken)
+}
+
+func TestClient_RBAC(t *testing.T) {
+	baseURL := "http://localhost:8700"
+	privateKeyHex := os.Getenv("PRIVATE_KEY_HEX")
+	assert.NotEmpty(t, privateKeyHex)
+
+	_, testAddress, err := GenerateEthPrivateKey()
+	assert.NoError(t, err)
+
+	apiClient, err := NewApiClient(baseURL, "localhost", "v1", privateKeyHex)
+	assert.NoError(t, err)
+
+	createRoleResp, err := apiClient.CreateRole(&model.CreateRoleRequest{Name: "test"})
+	assert.NoError(t, err)
+	assert.True(t, createRoleResp)
+
+	getRolesResp, err := apiClient.GetRoles()
+	assert.NoError(t, err)
+	assert.NotEmpty(t, getRolesResp)
+
+	getRolePermissionsResp, err := apiClient.GetRolePermissions("test")
+	assert.NoError(t, err)
+	assert.NotEmpty(t, getRolePermissionsResp)
+
+	deleteRoleResp, err := apiClient.DeleteRole("test")
+	assert.NoError(t, err)
+	assert.True(t, deleteRoleResp)
+
+	assignRoleResp, err := apiClient.AssignRole(&model.AssignRoleRequest{UserID: 1, Role: "test"})
+	assert.Error(t, err)
+	assert.False(t, assignRoleResp)
+
+	// We should create the user first
+	user, err := apiClient.UserCreate(&model.UserCreateRequest{EthAddress: testAddress.Hex()})
+	assert.NoError(t, err)
+	assert.NotZero(t, user)
+
+	assignRoleResp, err = apiClient.AssignRole(&model.AssignRoleRequest{UserID: uint(user), Role: "test"})
+	assert.NoError(t, err)
+	assert.True(t, assignRoleResp)
+
+	grantRolePathPermissionsResp, err := apiClient.GrantRolePathPermissions(&model.GrantPermissionRequest{Role: "test", Path: "/api/v1/rbac/roles/:name/permissions", Methods: []string{"GET"}})
+	assert.NoError(t, err)
+	assert.True(t, grantRolePathPermissionsResp)
+
+	// // Check permission
+	getRolePermissionsResp, err = apiClient.GetRolePermissions("test")
+	assert.NoError(t, err)
+	assert.NotEmpty(t, getRolePermissionsResp)
+	assert.Equal(t, 1, len(getRolePermissionsResp))
+	assert.Equal(t, "test", getRolePermissionsResp[0].Role)
+	assert.Equal(t, "/api/v1/rbac/roles/:name/permissions", getRolePermissionsResp[0].Path)
+	assert.Equal(t, "GET", getRolePermissionsResp[0].Method)
+
+	// CreateRoleHierarchy
+	createRoleHierarchyResp, err := apiClient.CreateRoleHierarchy(&model.RoleHierarchyRequest{RoleHierarchy: []model.RoleHierarchy{{ChildRole: "test", ParentRole: "admin"}}})
+	assert.NoError(t, err)
+	assert.True(t, createRoleHierarchyResp)
+
+	// DeleteRoleHierarchy
+	deleteRoleHierarchyResp, err := apiClient.DeleteRoleHierarchy("admin", "test")
+	assert.NoError(t, err)
+	assert.True(t, deleteRoleHierarchyResp)
+
+	// RemoveUserRole
+	removeUserRoleResp, err := apiClient.RemoveUserRole(strconv.FormatUint(user, 10), "test")
+	assert.NoError(t, err)
+	assert.True(t, removeUserRoleResp)
+
+	// DeleteRole
+	deleteRoleResp, err = apiClient.DeleteRole("test")
+	assert.NoError(t, err)
+	assert.True(t, deleteRoleResp)
 }
