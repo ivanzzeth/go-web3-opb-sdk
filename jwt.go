@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -15,7 +16,56 @@ import (
 	"github.com/spruceid/siwe-go"
 )
 
-func (c *ApiClient) JwtVerify(token *model.JwtVerifyRequest) (*model.JwtVerifyResponse, error) {
+func (c *Client) SignIn() (string, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.signIn()
+}
+
+func (c *Client) waitSignIn() {
+	for {
+		_, err := c.signIn()
+		if err == nil {
+			break
+		}
+
+		// TODO: Logging
+		log.Println("waitSignIn: ", err)
+		time.Sleep(1 * time.Second)
+	}
+}
+
+func (c *Client) signIn() (string, error) {
+	log.Println("signIn")
+	if c.ethPrivateKey != nil {
+		// Use SIWE to sign in again
+		nonce, err := c.SiweGetNonce()
+		if err != nil {
+			return "", err
+		}
+		// TODO: Configurable
+		message, err := siwe.InitMessage(c.domain, c.ethAddress.Hex(), c.baseURL, nonce, map[string]interface{}{
+			"issuedAt":       time.Now().UTC().Format(time.RFC3339),
+			"expirationTime": time.Now().Add(5 * time.Minute).UTC().Format(time.RFC3339),
+		})
+		if err != nil {
+			return "", err
+		}
+		messageModel, err := c.SiweSignMessage(message)
+		if err != nil {
+			return "", err
+		}
+		siweAuthResult, err := c.SiweVerify(messageModel)
+		if err != nil {
+			return "", err
+		}
+		c.cachedJwtToken = siweAuthResult.Token
+	}
+
+	return c.cachedJwtToken, nil
+}
+
+func (c *Client) JwtVerify(token *model.JwtVerifyRequest) (*model.JwtVerifyResponse, error) {
 	url := fmt.Sprintf("%s/api/%s/jwt/verify", c.baseURL, c.version)
 	tokenJson, err := json.Marshal(token)
 	if err != nil {
@@ -41,7 +91,7 @@ func (c *ApiClient) JwtVerify(token *model.JwtVerifyRequest) (*model.JwtVerifyRe
 	return &jwtVerifyResultResp.Data, nil
 }
 
-func (c *ApiClient) GetJWKS() (*model.JWKSResponse, error) {
+func (c *Client) GetJWKS() (*model.JWKSResponse, error) {
 	var jwksResp model.JWKSResponse
 
 	if c.cachedJwksTime == nil || time.Since(*c.cachedJwksTime) > 10*time.Minute {
@@ -71,7 +121,7 @@ func (c *ApiClient) GetJWKS() (*model.JWKSResponse, error) {
 	return &jwksResp, nil
 }
 
-func (c *ApiClient) JwtVerifyLocally(token *model.JwtVerifyRequest) (*model.JwtVerifyResponse, error) {
+func (c *Client) JwtVerifyLocally(token *model.JwtVerifyRequest) (*model.JwtVerifyResponse, error) {
 	// jwksResp, err := c.GetJWKS()
 	// if err != nil {
 	// 	return nil, err
@@ -90,7 +140,7 @@ func (c *ApiClient) JwtVerifyLocally(token *model.JwtVerifyRequest) (*model.JwtV
 	}, nil
 }
 
-func (c *ApiClient) JwtRefresh(token *model.JwtRefreshRequest) (*model.JwtRefreshResponse, error) {
+func (c *Client) JwtRefresh(token *model.JwtRefreshRequest) (*model.JwtRefreshResponse, error) {
 	url := fmt.Sprintf("%s/api/%s/jwt/refresh", c.baseURL, c.version)
 	tokenJson, err := json.Marshal(token)
 	if err != nil {
@@ -116,43 +166,26 @@ func (c *ApiClient) JwtRefresh(token *model.JwtRefreshRequest) (*model.JwtRefres
 	return &jwtRefreshResultResp.Data, nil
 }
 
-func (c *ApiClient) GetCachedJwtToken() string {
+func (c *Client) GetCachedJwtToken() string {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if c.cachedJwtToken == "" {
+		c.waitSignIn()
+	}
 	valid, err := c.JwtVerifyLocally(&model.JwtVerifyRequest{Token: c.cachedJwtToken})
+	log.Println("GetCachedJwtToken JwtVerifyLocally: ", valid, err)
 	if err != nil || !valid.Valid {
 		// Refresh token first
 		newTokenResp, err := c.JwtRefresh(&model.JwtRefreshRequest{Token: c.cachedJwtToken})
+		log.Println("GetCachedJwtToken JwtRefresh: ", newTokenResp, err)
 		if err == nil && newTokenResp.Token != c.cachedJwtToken {
 			c.cachedJwtToken = newTokenResp.Token
 		} else {
 			// If same token, sign in again
-			if c.ethPrivateKey != nil {
-				// Use SIWE to sign in again
-				nonce, err := c.SiweGetNonce()
-				if err != nil {
-					return ""
-				}
-				// TODO: Configurable
-				message, err := siwe.InitMessage(c.domain, c.ethAddress.Hex(), c.baseURL, nonce, map[string]interface{}{
-					"issuedAt":       time.Now().UTC().Format(time.RFC3339),
-					"expirationTime": time.Now().Add(5 * time.Minute).UTC().Format(time.RFC3339),
-				})
-				if err != nil {
-					return ""
-				}
-				messageModel, err := c.SiweSignMessage(message)
-				if err != nil {
-					return ""
-				}
-				siweAuthResult, err := c.SiweVerify(messageModel)
-				if err != nil {
-					return ""
-				}
-				c.cachedJwtToken = siweAuthResult.Token
-			}
+			c.waitSignIn()
 		}
 	}
+
 	return c.cachedJwtToken
 }
 

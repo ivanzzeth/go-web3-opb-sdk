@@ -14,7 +14,7 @@ import (
 	"github.com/ivanzzeth/go-web3-opb-sdk/model"
 )
 
-type ApiClient struct {
+type Client struct {
 	baseURL       string
 	domain        string
 	version       string
@@ -28,7 +28,7 @@ type ApiClient struct {
 	cachedJwksTime *time.Time
 }
 
-func NewApiClient(baseURL, domain, version, ethPrivateKeyHex string) (*ApiClient, error) {
+func NewApiClient(baseURL, domain, version, ethPrivateKeyHex string) (*Client, error) {
 	// Validate baseURL
 	if baseURL == "" {
 		return nil, fmt.Errorf("baseURL is required")
@@ -67,7 +67,7 @@ func NewApiClient(baseURL, domain, version, ethPrivateKeyHex string) (*ApiClient
 
 	ethAddress := crypto.PubkeyToAddress(ethPrivateKey.PublicKey)
 
-	return &ApiClient{
+	return &Client{
 		baseURL:       baseURL,
 		domain:        domain,
 		version:       version,

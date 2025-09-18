@@ -8,7 +8,7 @@ import (
 	"github.com/ivanzzeth/go-web3-opb-sdk/model"
 )
 
-func (c *ApiClient) UserGetByID(id uint64) (*model.User, error) {
+func (c *Client) UserGetByID(id uint64) (*model.User, error) {
 	url := fmt.Sprintf("%s/api/%s/users/%d", c.baseURL, c.version, id)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -41,7 +41,7 @@ func (c *ApiClient) UserGetByID(id uint64) (*model.User, error) {
 	return &userResp.Data, nil
 }
 
-func (c *ApiClient) UserGetByEthWallet(address string) (*model.User, error) {
+func (c *Client) UserGetByEthWallet(address string) (*model.User, error) {
 	url := fmt.Sprintf("%s/api/%s/users/eth_wallets/%s", c.baseURL, c.version, address)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -68,7 +68,7 @@ func (c *ApiClient) UserGetByEthWallet(address string) (*model.User, error) {
 	return &userResp.Data, nil
 }
 
-func (c *ApiClient) UserGetEthWallets(id uint64) ([]*model.UserEthWallet, error) {
+func (c *Client) UserGetEthWallets(id uint64) ([]*model.UserEthWallet, error) {
 	url := fmt.Sprintf("%s/api/%s/users/%d/eth_wallets", c.baseURL, c.version, id)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -95,7 +95,7 @@ func (c *ApiClient) UserGetEthWallets(id uint64) ([]*model.UserEthWallet, error)
 	return userEthWalletsResp.Data, nil
 }
 
-func (c *ApiClient) UserList(listReq *model.UserListRequest) (*model.UserListResponse, error) {
+func (c *Client) UserList(listReq *model.UserListRequest) (*model.UserListResponse, error) {
 	url := fmt.Sprintf("%s/api/%s/users?page=%d&pageSize=%d", c.baseURL, c.version, listReq.Page, listReq.PageSize)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {

@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/ivanzzeth/go-web3-opb-sdk/model"
 	"github.com/spruceid/siwe-go"
@@ -65,4 +66,51 @@ func TestNewApiClient(t *testing.T) {
 	user, err = apiClient.UserGetByEthWallet(address.Hex())
 	assert.Error(t, err)
 	assert.Nil(t, user)
+}
+
+func TestClient_SignIn(t *testing.T) {
+	baseURL := "http://localhost:8700"
+	privateKey, address, err := GenerateEthPrivateKey()
+	assert.NoError(t, err)
+	assert.NotNil(t, privateKey)
+	assert.NotNil(t, address)
+
+	privateKeyHex := hex.EncodeToString(privateKey.D.Bytes())
+
+	apiClient, err := NewApiClient(baseURL, "localhost", "v1", privateKeyHex)
+	assert.NoError(t, err)
+	assert.NotNil(t, apiClient)
+
+	jwtToken, err := apiClient.SignIn()
+	assert.NoError(t, err)
+	assert.NotEmpty(t, jwtToken)
+
+	jwtResult, err := apiClient.JwtVerify(&model.JwtVerifyRequest{Token: jwtToken})
+	assert.NoError(t, err)
+	assert.NotNil(t, jwtResult)
+	assert.True(t, jwtResult.Valid)
+	t.Logf("jwtToken: %s", jwtToken)
+
+	// Refresh token
+	refreshJwtToken, err := apiClient.JwtRefresh(&model.JwtRefreshRequest{Token: jwtToken})
+	assert.NoError(t, err)
+	assert.NotEmpty(t, refreshJwtToken)
+	assert.NotEqual(t, jwtToken, refreshJwtToken.Token)
+	t.Logf("refresh jwtToken: %s", refreshJwtToken.Token)
+
+	// Let the token invalid
+	originJwtToken := jwtToken
+	jwtToken = "invalid"
+	apiClient.cachedJwtToken = jwtToken
+	jwtResult, err = apiClient.JwtVerify(&model.JwtVerifyRequest{Token: jwtToken})
+	assert.Error(t, err)
+	assert.Nil(t, jwtResult)
+	t.Logf("invalidate jwtToken")
+
+	// Get cached jwt token
+	time.Sleep(1 * time.Second)
+	cachedJwtToken := apiClient.GetCachedJwtToken()
+	assert.NotEmpty(t, cachedJwtToken)
+	assert.NotEqual(t, jwtToken, cachedJwtToken)
+	assert.NotEqual(t, originJwtToken, cachedJwtToken)
 }
