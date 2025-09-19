@@ -14,7 +14,7 @@ import (
 )
 
 func (c *Client) SiweGetNonce() (string, error) {
-	url := fmt.Sprintf("%s/api/%s/siwe/nonce", c.baseURL, c.version)
+	url := fmt.Sprintf("%s/api/%s/siwe/nonce", c.authBaseURL, c.version)
 	resp, err := c.httpClient.Post(url, "application/json", nil)
 	if err != nil {
 		return "", err
@@ -54,7 +54,7 @@ func (c *Client) SiweSignMessage(message *siwe.Message) (*model.SiweVerifyReques
 }
 
 func (c *Client) SiweVerify(message *model.SiweVerifyRequest) (model.SiweVerifyResponse, error) {
-	url := fmt.Sprintf("%s/api/%s/siwe/verify", c.baseURL, c.version)
+	url := fmt.Sprintf("%s/api/%s/siwe/verify", c.authBaseURL, c.version)
 	messageJSON, err := json.Marshal(message)
 	if err != nil {
 		return model.SiweVerifyResponse{}, err

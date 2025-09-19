@@ -15,7 +15,7 @@ import (
 )
 
 type Client struct {
-	baseURL       string
+	authBaseURL   string
 	domain        string
 	version       string
 	ethPrivateKey *ecdsa.PrivateKey
@@ -28,13 +28,13 @@ type Client struct {
 	cachedJwksTime *time.Time
 }
 
-func NewApiClient(baseURL, domain, version, ethPrivateKeyHex string) (*Client, error) {
+func NewApiClient(authhBaseURL, domain, version, ethPrivateKeyHex string) (*Client, error) {
 	// Validate baseURL
-	if baseURL == "" {
+	if authhBaseURL == "" {
 		return nil, fmt.Errorf("baseURL is required")
 	}
 
-	_, err := url.Parse(baseURL)
+	_, err := url.Parse(authhBaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("baseURL is invalid")
 	}
@@ -68,7 +68,7 @@ func NewApiClient(baseURL, domain, version, ethPrivateKeyHex string) (*Client, e
 	ethAddress := crypto.PubkeyToAddress(ethPrivateKey.PublicKey)
 
 	return &Client{
-		baseURL:       baseURL,
+		authBaseURL:   authhBaseURL,
 		domain:        domain,
 		version:       version,
 		httpClient:    &http.Client{},

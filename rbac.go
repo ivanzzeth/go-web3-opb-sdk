@@ -10,7 +10,7 @@ import (
 )
 
 func (c *Client) CreateRole(req *model.CreateRoleRequest) (bool, error) {
-	url := fmt.Sprintf("%s/api/%s/rbac/roles", c.baseURL, c.version)
+	url := fmt.Sprintf("%s/api/%s/rbac/roles", c.authBaseURL, c.version)
 	jsonReq, err := json.Marshal(req)
 	if err != nil {
 		return false, err
@@ -42,7 +42,7 @@ func (c *Client) CreateRole(req *model.CreateRoleRequest) (bool, error) {
 }
 
 func (c *Client) GetRoles() ([]string, error) {
-	url := fmt.Sprintf("%s/api/%s/rbac/roles", c.baseURL, c.version)
+	url := fmt.Sprintf("%s/api/%s/rbac/roles", c.authBaseURL, c.version)
 	httpReq, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
@@ -69,7 +69,7 @@ func (c *Client) GetRoles() ([]string, error) {
 }
 
 func (c *Client) GetRolePermissions(name string) ([]*model.RolePermission, error) {
-	url := fmt.Sprintf("%s/api/%s/rbac/roles/%s/permissions", c.baseURL, c.version, name)
+	url := fmt.Sprintf("%s/api/%s/rbac/roles/%s/permissions", c.authBaseURL, c.version, name)
 	httpReq, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
@@ -96,7 +96,7 @@ func (c *Client) GetRolePermissions(name string) ([]*model.RolePermission, error
 }
 
 func (c *Client) DeleteRole(name string) (bool, error) {
-	url := fmt.Sprintf("%s/api/%s/rbac/roles/%s", c.baseURL, c.version, name)
+	url := fmt.Sprintf("%s/api/%s/rbac/roles/%s", c.authBaseURL, c.version, name)
 	httpReq, err := http.NewRequest("DELETE", url, nil)
 	if err != nil {
 		return false, err
@@ -123,7 +123,7 @@ func (c *Client) DeleteRole(name string) (bool, error) {
 }
 
 func (c *Client) AssignRole(req *model.AssignRoleRequest) (bool, error) {
-	url := fmt.Sprintf("%s/api/%s/rbac/roles/assign", c.baseURL, c.version)
+	url := fmt.Sprintf("%s/api/%s/rbac/roles/assign", c.authBaseURL, c.version)
 	jsonReq, err := json.Marshal(req)
 	if err != nil {
 		return false, err
@@ -153,7 +153,7 @@ func (c *Client) AssignRole(req *model.AssignRoleRequest) (bool, error) {
 }
 
 func (c *Client) GrantRolePathPermissions(req *model.GrantPermissionRequest) (bool, error) {
-	url := fmt.Sprintf("%s/api/%s/rbac/roles/permissions/grant", c.baseURL, c.version)
+	url := fmt.Sprintf("%s/api/%s/rbac/roles/permissions/grant", c.authBaseURL, c.version)
 	jsonReq, err := json.Marshal(req)
 	if err != nil {
 		return false, err
@@ -184,7 +184,7 @@ func (c *Client) GrantRolePathPermissions(req *model.GrantPermissionRequest) (bo
 }
 
 func (c *Client) RemoveUserRole(userId string, role string) (bool, error) {
-	url := fmt.Sprintf("%s/api/%s/rbac/roles/%s/users/%s", c.baseURL, c.version, role, userId)
+	url := fmt.Sprintf("%s/api/%s/rbac/roles/%s/users/%s", c.authBaseURL, c.version, role, userId)
 	httpReq, err := http.NewRequest("DELETE", url, nil)
 	if err != nil {
 		return false, err
@@ -211,7 +211,7 @@ func (c *Client) RemoveUserRole(userId string, role string) (bool, error) {
 }
 
 func (c *Client) CreateRoleHierarchy(req *model.RoleHierarchyRequest) (bool, error) {
-	url := fmt.Sprintf("%s/api/%s/rbac/roles/hierarchy", c.baseURL, c.version)
+	url := fmt.Sprintf("%s/api/%s/rbac/roles/hierarchy", c.authBaseURL, c.version)
 	jsonReq, err := json.Marshal(req)
 	if err != nil {
 		return false, err
@@ -242,7 +242,7 @@ func (c *Client) CreateRoleHierarchy(req *model.RoleHierarchyRequest) (bool, err
 }
 
 func (c *Client) DeleteRoleHierarchy(parentRole string, childRole string) (bool, error) {
-	url := fmt.Sprintf("%s/api/%s/rbac/roles/hierarchy/%s/children/%s", c.baseURL, c.version, parentRole, childRole)
+	url := fmt.Sprintf("%s/api/%s/rbac/roles/hierarchy/%s/children/%s", c.authBaseURL, c.version, parentRole, childRole)
 	httpReq, err := http.NewRequest("DELETE", url, nil)
 	if err != nil {
 		return false, err

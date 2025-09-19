@@ -7,14 +7,27 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/ivanzzeth/go-web3-opb-sdk/model"
-	"github.com/lestrrat-go/backoff/v2"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/spruceid/siwe-go"
 )
+
+var (
+	// Global JWKS auto-refresh to reduce HTTP requests
+	jwksAutoRefresh *jwk.AutoRefresh
+	cacheOnce       sync.Once
+)
+
+// initJWKSCache initializes the global JWKS auto-refresh
+func initJWKSCache(ctx context.Context) {
+	cacheOnce.Do(func() {
+		jwksAutoRefresh = jwk.NewAutoRefresh(ctx)
+	})
+}
 
 func (c *Client) SignIn() (string, error) {
 	c.mu.Lock()
@@ -44,7 +57,7 @@ func (c *Client) signIn() (string, error) {
 			return "", err
 		}
 		// TODO: Configurable
-		message, err := siwe.InitMessage(c.domain, c.ethAddress.Hex(), c.baseURL, nonce, map[string]interface{}{
+		message, err := siwe.InitMessage(c.domain, c.ethAddress.Hex(), c.authBaseURL, nonce, map[string]interface{}{
 			"issuedAt":       time.Now().UTC().Format(time.RFC3339),
 			"expirationTime": time.Now().Add(5 * time.Minute).UTC().Format(time.RFC3339),
 		})
@@ -66,7 +79,7 @@ func (c *Client) signIn() (string, error) {
 }
 
 func (c *Client) JwtVerify(token *model.JwtVerifyRequest) (*model.JwtVerifyResponse, error) {
-	url := fmt.Sprintf("%s/api/%s/jwt/verify", c.baseURL, c.version)
+	url := fmt.Sprintf("%s/api/%s/jwt/verify", c.authBaseURL, c.version)
 	tokenJson, err := json.Marshal(token)
 	if err != nil {
 		return nil, err
@@ -95,7 +108,7 @@ func (c *Client) GetJWKS() (*model.JWKSResponse, error) {
 	var jwksResp model.JWKSResponse
 
 	if c.cachedJwksTime == nil || time.Since(*c.cachedJwksTime) > 10*time.Minute {
-		url := fmt.Sprintf("%s/.well-known/jwks.json", c.baseURL)
+		url := fmt.Sprintf("%s/.well-known/jwks.json", c.authBaseURL)
 
 		resp, err := c.httpClient.Get(url)
 		if err != nil {
@@ -127,7 +140,7 @@ func (c *Client) JwtVerifyLocally(token *model.JwtVerifyRequest) (*model.JwtVeri
 	// 	return nil, err
 	// }
 
-	url := fmt.Sprintf("%s/.well-known/jwks.json", c.baseURL)
+	url := fmt.Sprintf("%s/.well-known/jwks.json", c.authBaseURL)
 
 	jwtToken, err := verifyJWT(context.Background(), c.httpClient, token.Token, url)
 	if err != nil {
@@ -141,7 +154,7 @@ func (c *Client) JwtVerifyLocally(token *model.JwtVerifyRequest) (*model.JwtVeri
 }
 
 func (c *Client) JwtRefresh(token *model.JwtRefreshRequest) (*model.JwtRefreshResponse, error) {
-	url := fmt.Sprintf("%s/api/%s/jwt/refresh", c.baseURL, c.version)
+	url := fmt.Sprintf("%s/api/%s/jwt/refresh", c.authBaseURL, c.version)
 	tokenJson, err := json.Marshal(token)
 	if err != nil {
 		return nil, err
@@ -190,11 +203,20 @@ func (c *Client) GetCachedJwtToken() string {
 }
 
 func verifyJWT(ctx context.Context, httpClient *http.Client, tokenString, jwksURL string) (*jwt.Token, error) {
-	// TODO: Optimize
-	set, err := jwk.Fetch(ctx, jwksURL,
-		jwk.WithHTTPClient(httpClient),
-		jwk.WithFetchBackoff(backoff.Exponential(backoff.WithMaxInterval(10*time.Second), backoff.WithMaxRetries(3))),
-	)
+	// Initialize global JWKS auto-refresh if not already done
+	initJWKSCache(ctx)
+
+	// Configure auto-refresh for this JWKS URL if not already registered
+	if !jwksAutoRefresh.IsRegistered(jwksURL) {
+		jwksAutoRefresh.Configure(jwksURL,
+			jwk.WithHTTPClient(httpClient),
+			jwk.WithRefreshInterval(30*time.Minute),   // Refresh every 30 minutes
+			jwk.WithMinRefreshInterval(5*time.Minute), // Minimum 5 minutes between refreshes
+		)
+	}
+
+	// Use auto-refresh to get JWKS (cached and automatically refreshed)
+	set, err := jwksAutoRefresh.Fetch(ctx, jwksURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch JWKS: %v", err)
 	}
