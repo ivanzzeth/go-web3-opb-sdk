@@ -18,7 +18,7 @@ func init() {
 
 // SuccessResponse success response
 func SuccessResponse[T any](c *gin.Context, data T) {
-	c.JSON(http.StatusOK, model.APIResponse[T]{
+	c.JSON(http.StatusOK, model.ApiResponse[T]{
 		Data:      data,
 		Timestamp: time.Now().Unix(),
 		RequestID: getRequestID(c),
@@ -34,7 +34,7 @@ func ErrorResponse(c *gin.Context, err error) {
 			Msg:  err.Error(),
 		}
 	}
-	c.JSON(http.StatusOK, model.APIResponse[any]{
+	c.JSON(http.StatusOK, model.ApiResponse[any]{
 		ApiError:  apiErr,
 		Timestamp: time.Now().Unix(),
 		RequestID: getRequestID(c),

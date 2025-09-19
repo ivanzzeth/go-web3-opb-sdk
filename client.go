@@ -15,6 +15,8 @@ import (
 )
 
 type Client struct {
+	ApiNamespace string // e.g. "notification", "wallet-services", etc.
+
 	authBaseURL   string
 	domain        string
 	version       string
@@ -28,7 +30,7 @@ type Client struct {
 	cachedJwksTime *time.Time
 }
 
-func NewApiClient(authhBaseURL, domain, version, ethPrivateKeyHex string) (*Client, error) {
+func NewApiClient(authhBaseURL, domain, version, apiNamespace, ethPrivateKeyHex string) (*Client, error) {
 	// Validate baseURL
 	if authhBaseURL == "" {
 		return nil, fmt.Errorf("baseURL is required")
@@ -47,6 +49,10 @@ func NewApiClient(authhBaseURL, domain, version, ethPrivateKeyHex string) (*Clie
 	// Validate version
 	if version == "" {
 		version = "v1"
+	}
+
+	if strings.HasPrefix(apiNamespace, "/") || strings.HasPrefix(apiNamespace, "v") {
+		return nil, fmt.Errorf("apiNamespace must not start with '/' or 'v'")
 	}
 
 	if !strings.HasPrefix(version, "v") {
@@ -68,9 +74,11 @@ func NewApiClient(authhBaseURL, domain, version, ethPrivateKeyHex string) (*Clie
 	ethAddress := crypto.PubkeyToAddress(ethPrivateKey.PublicKey)
 
 	return &Client{
-		authBaseURL:   authhBaseURL,
-		domain:        domain,
-		version:       version,
+		authBaseURL:  authhBaseURL,
+		domain:       domain,
+		version:      version,
+		ApiNamespace: apiNamespace,
+
 		httpClient:    &http.Client{},
 		ethPrivateKey: ethPrivateKey,
 		ethAddress:    ethAddress,

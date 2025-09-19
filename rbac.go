@@ -28,7 +28,7 @@ func (c *Client) CreateRole(req *model.CreateRoleRequest) (bool, error) {
 	}
 	defer httpResp.Body.Close()
 
-	var createRoleResp model.APIResponse[bool]
+	var createRoleResp model.ApiResponse[bool]
 	err = json.NewDecoder(httpResp.Body).Decode(&createRoleResp)
 	if err != nil {
 		return false, err
@@ -55,7 +55,7 @@ func (c *Client) GetRoles() ([]string, error) {
 	}
 	defer httpResp.Body.Close()
 
-	var getRolesResp model.APIResponse[[]string]
+	var getRolesResp model.ApiResponse[[]string]
 	err = json.NewDecoder(httpResp.Body).Decode(&getRolesResp)
 	if err != nil {
 		return nil, err
@@ -82,7 +82,7 @@ func (c *Client) GetRolePermissions(name string) ([]*model.RolePermission, error
 	}
 	defer httpResp.Body.Close()
 
-	var getRolePermissionsResp model.APIResponse[model.GetRolePermissionsResponse]
+	var getRolePermissionsResp model.ApiResponse[model.GetRolePermissionsResponse]
 	err = json.NewDecoder(httpResp.Body).Decode(&getRolePermissionsResp)
 	if err != nil {
 		return nil, err
@@ -109,7 +109,7 @@ func (c *Client) DeleteRole(name string) (bool, error) {
 	}
 	defer httpResp.Body.Close()
 
-	var deleteRoleResp model.APIResponse[bool]
+	var deleteRoleResp model.ApiResponse[bool]
 	err = json.NewDecoder(httpResp.Body).Decode(&deleteRoleResp)
 	if err != nil {
 		return false, err
@@ -140,7 +140,7 @@ func (c *Client) AssignRole(req *model.AssignRoleRequest) (bool, error) {
 	}
 	defer httpResp.Body.Close()
 
-	var assignRoleResp model.APIResponse[bool]
+	var assignRoleResp model.ApiResponse[bool]
 	err = json.NewDecoder(httpResp.Body).Decode(&assignRoleResp)
 	if err != nil {
 		return false, err
@@ -154,6 +154,9 @@ func (c *Client) AssignRole(req *model.AssignRoleRequest) (bool, error) {
 
 func (c *Client) GrantRolePathPermissions(req *model.GrantPermissionRequest) (bool, error) {
 	url := fmt.Sprintf("%s/api/%s/rbac/roles/permissions/grant", c.authBaseURL, c.version)
+	// req.Path shoud be like "/admin//users"
+	// we need to add "/api/" and the ApiNamespace to the path
+	req.Path = fmt.Sprintf("/api/%s%s", c.ApiNamespace, req.Path)
 	jsonReq, err := json.Marshal(req)
 	if err != nil {
 		return false, err
@@ -170,7 +173,7 @@ func (c *Client) GrantRolePathPermissions(req *model.GrantPermissionRequest) (bo
 	}
 	defer httpResp.Body.Close()
 
-	var grantRolePathPermissionsResp model.APIResponse[bool]
+	var grantRolePathPermissionsResp model.ApiResponse[bool]
 	err = json.NewDecoder(httpResp.Body).Decode(&grantRolePathPermissionsResp)
 	if err != nil {
 		return false, err
@@ -197,7 +200,7 @@ func (c *Client) RemoveUserRole(userId string, role string) (bool, error) {
 	}
 	defer httpResp.Body.Close()
 
-	var removeUserRoleResp model.APIResponse[bool]
+	var removeUserRoleResp model.ApiResponse[bool]
 	err = json.NewDecoder(httpResp.Body).Decode(&removeUserRoleResp)
 	if err != nil {
 		return false, err
@@ -228,7 +231,7 @@ func (c *Client) CreateRoleHierarchy(req *model.RoleHierarchyRequest) (bool, err
 	}
 	defer httpResp.Body.Close()
 
-	var createRoleHierarchyResp model.APIResponse[bool]
+	var createRoleHierarchyResp model.ApiResponse[bool]
 	err = json.NewDecoder(httpResp.Body).Decode(&createRoleHierarchyResp)
 	if err != nil {
 		return false, err
@@ -255,7 +258,7 @@ func (c *Client) DeleteRoleHierarchy(parentRole string, childRole string) (bool,
 	}
 	defer httpResp.Body.Close()
 
-	var deleteRoleHierarchyResp model.APIResponse[bool]
+	var deleteRoleHierarchyResp model.ApiResponse[bool]
 	err = json.NewDecoder(httpResp.Body).Decode(&deleteRoleHierarchyResp)
 	if err != nil {
 		return false, err

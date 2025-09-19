@@ -91,7 +91,7 @@ func (c *Client) JwtVerify(token *model.JwtVerifyRequest) (*model.JwtVerifyRespo
 	}
 	defer resp.Body.Close()
 
-	var jwtVerifyResultResp model.APIResponse[model.JwtVerifyResponse]
+	var jwtVerifyResultResp model.ApiResponse[model.JwtVerifyResponse]
 	err = json.NewDecoder(resp.Body).Decode(&jwtVerifyResultResp)
 	if err != nil {
 		return nil, err
@@ -166,7 +166,7 @@ func (c *Client) JwtRefresh(token *model.JwtRefreshRequest) (*model.JwtRefreshRe
 	}
 	defer resp.Body.Close()
 
-	var jwtRefreshResultResp model.APIResponse[model.JwtRefreshResponse]
+	var jwtRefreshResultResp model.ApiResponse[model.JwtRefreshResponse]
 	err = json.NewDecoder(resp.Body).Decode(&jwtRefreshResultResp)
 	if err != nil {
 		return nil, err

@@ -71,6 +71,8 @@ func AuthMiddleware(client *web3opb.Client) gin.HandlerFunc {
 		// Check if user has permission to access the resource
 		// Use FullPath() to get the route pattern (e.g., /users/:id instead of /users/123)
 		path := c.FullPath()
+		//Add apiNamespace to path
+		path = "/api/" + client.ApiNamespace + path
 		method := c.Request.Method
 		payloadJson, err := json.Marshal(result.Payload)
 		if err != nil {

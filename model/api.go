@@ -1,7 +1,7 @@
 package model
 
-// APIResponse unified API response structure
-type APIResponse[T any] struct {
+// ApiResponse unified API response structure
+type ApiResponse[T any] struct {
 	ApiError
 
 	Data      T      `json:"data,omitempty"`

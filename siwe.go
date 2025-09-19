@@ -21,7 +21,7 @@ func (c *Client) SiweGetNonce() (string, error) {
 	}
 	defer resp.Body.Close()
 
-	var nonceResp model.APIResponse[model.SiweNonceResponse]
+	var nonceResp model.ApiResponse[model.SiweNonceResponse]
 	err = json.NewDecoder(resp.Body).Decode(&nonceResp)
 	if err != nil {
 		return "", err
@@ -65,7 +65,7 @@ func (c *Client) SiweVerify(message *model.SiweVerifyRequest) (model.SiweVerifyR
 	}
 	defer resp.Body.Close()
 
-	var authResultResp model.APIResponse[model.SiweVerifyResponse]
+	var authResultResp model.ApiResponse[model.SiweVerifyResponse]
 	err = json.NewDecoder(resp.Body).Decode(&authResultResp)
 	if err != nil {
 		return model.SiweVerifyResponse{}, err

@@ -29,7 +29,7 @@ func (c *Client) UserGetByID(id uint64) (*model.User, error) {
 	// }
 	// fmt.Printf("body: %s\n", string(body))
 	// return nil, nil
-	var userResp model.APIResponse[model.User]
+	var userResp model.ApiResponse[model.User]
 	err = json.NewDecoder(resp.Body).Decode(&userResp)
 	if err != nil {
 		return nil, err
@@ -56,7 +56,7 @@ func (c *Client) UserGetByEthWallet(address string) (*model.User, error) {
 	}
 	defer resp.Body.Close()
 
-	var userResp model.APIResponse[model.User]
+	var userResp model.ApiResponse[model.User]
 	err = json.NewDecoder(resp.Body).Decode(&userResp)
 	if err != nil {
 		return nil, err
@@ -83,7 +83,7 @@ func (c *Client) UserGetEthWallets(id uint64) ([]*model.UserEthWallet, error) {
 	}
 	defer resp.Body.Close()
 
-	var userEthWalletsResp model.APIResponse[[]*model.UserEthWallet]
+	var userEthWalletsResp model.ApiResponse[[]*model.UserEthWallet]
 	err = json.NewDecoder(resp.Body).Decode(&userEthWalletsResp)
 	if err != nil {
 		return nil, err
@@ -114,7 +114,7 @@ func (c *Client) UserCreate(createReq *model.UserCreateRequest) (uint64, error) 
 	}
 	defer resp.Body.Close()
 
-	var userCreateResp model.APIResponse[uint64]
+	var userCreateResp model.ApiResponse[uint64]
 	err = json.NewDecoder(resp.Body).Decode(&userCreateResp)
 	if err != nil {
 		return 0, err
@@ -139,7 +139,7 @@ func (c *Client) UserList(listReq *model.UserListRequest) (*model.UserListRespon
 	}
 	defer resp.Body.Close()
 
-	var userListResp model.APIResponse[model.UserListResponse]
+	var userListResp model.ApiResponse[model.UserListResponse]
 	err = json.NewDecoder(resp.Body).Decode(&userListResp)
 	if err != nil {
 		return nil, err

@@ -21,7 +21,7 @@ func TestNewApiClient(t *testing.T) {
 
 	privateKeyHex := hex.EncodeToString(privateKey.D.Bytes())
 
-	apiClient, err := NewApiClient(baseURL, "localhost", "v1", privateKeyHex)
+	apiClient, err := NewApiClient(baseURL, "localhost", "v1", "", privateKeyHex)
 	assert.NoError(t, err)
 	assert.NotNil(t, apiClient)
 
@@ -78,7 +78,7 @@ func TestClient_SignIn(t *testing.T) {
 
 	privateKeyHex := hex.EncodeToString(privateKey.D.Bytes())
 
-	apiClient, err := NewApiClient(baseURL, "localhost", "v1", privateKeyHex)
+	apiClient, err := NewApiClient(baseURL, "localhost", "v1", "", privateKeyHex)
 	assert.NoError(t, err)
 	assert.NotNil(t, apiClient)
 
@@ -124,7 +124,7 @@ func TestClient_RBAC(t *testing.T) {
 	_, testAddress, err := GenerateEthPrivateKey()
 	assert.NoError(t, err)
 
-	apiClient, err := NewApiClient(baseURL, "localhost", "v1", privateKeyHex)
+	apiClient, err := NewApiClient(baseURL, "localhost", "v1", "", privateKeyHex)
 	assert.NoError(t, err)
 
 	createRoleResp, err := apiClient.CreateRole(&model.CreateRoleRequest{Name: "test"})
