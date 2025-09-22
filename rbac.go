@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/ivanzzeth/go-web3-opb-sdk/model"
 )
@@ -154,9 +155,11 @@ func (c *Client) AssignRole(req *model.AssignRoleRequest) (bool, error) {
 
 func (c *Client) GrantRolePathPermissions(req *model.GrantPermissionRequest) (bool, error) {
 	url := fmt.Sprintf("%s/api/%s/rbac/roles/permissions/grant", c.authBaseURL, c.version)
-	// req.Path shoud be like "/admin//users"
+	// req.Path shoud be like "/admin/users"
 	// we need to add "/api/" and the ApiNamespace to the path
-	req.Path = fmt.Sprintf("/api/%s%s", c.ApiNamespace, req.Path)
+	if !strings.HasPrefix(req.Path, "/api/") {
+		req.Path = fmt.Sprintf("/api/%s%s", c.ApiNamespace, req.Path)
+	}
 	jsonReq, err := json.Marshal(req)
 	if err != nil {
 		return false, err

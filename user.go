@@ -125,6 +125,37 @@ func (c *Client) UserCreate(createReq *model.UserCreateRequest) (uint64, error) 
 	return userCreateResp.Data, nil
 }
 
+func (c *Client) UserUpdate(id uint64, updateReq *model.UserUpdateRequest) error {
+	url := fmt.Sprintf("%s/api/%s/users/%d", c.authBaseURL, c.version, id)
+	jsonReq, err := json.Marshal(updateReq)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequest("PUT", url, bytes.NewBuffer(jsonReq))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+c.GetCachedJwtToken())
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	var userUpdateResp model.ApiResponse[uint64]
+	err = json.NewDecoder(resp.Body).Decode(&userUpdateResp)
+	if err != nil {
+		return err
+	}
+
+	if userUpdateResp.ApiError.HasError() {
+		return userUpdateResp.ApiError
+	}
+
+	return nil
+}
+
 func (c *Client) UserList(listReq *model.UserListRequest) (*model.UserListResponse, error) {
 	url := fmt.Sprintf("%s/api/%s/users?page=%d&pageSize=%d", c.authBaseURL, c.version, listReq.Page, listReq.PageSize)
 	req, err := http.NewRequest("GET", url, nil)

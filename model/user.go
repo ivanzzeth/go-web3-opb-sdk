@@ -2,14 +2,17 @@ package model
 
 import (
 	"time"
+
+	"gorm.io/datatypes"
 )
 
 // User user table
 type User struct {
-	ID        uint64     `json:"id" gorm:"primaryKey;autoIncrement:false"` // Snowflake algorithm generated ID
-	CreatedAt time.Time  `json:"createdAt"`
-	UpdatedAt time.Time  `json:"updatedAt"`
-	DeletedAt *time.Time `json:"deletedAt,omitempty" gorm:"index"`
+	ID        uint64            `json:"id" gorm:"primaryKey;autoIncrement:false"` // Snowflake algorithm generated ID
+	Metadata  datatypes.JSONMap `json:"metadata"`
+	CreatedAt time.Time         `json:"createdAt"`
+	UpdatedAt time.Time         `json:"updatedAt"`
+	DeletedAt *time.Time        `json:"deletedAt,omitempty" gorm:"index"`
 }
 
 // UserEthWallet user Ethereum wallet table
@@ -34,4 +37,8 @@ type UserListResponse struct {
 
 type UserCreateRequest struct {
 	EthAddress string `json:"eth_address"`
+}
+
+type UserUpdateRequest struct {
+	Metadata datatypes.JSONMap `json:"metadata"`
 }

@@ -147,12 +147,22 @@ func TestClient_RBAC(t *testing.T) {
 	assert.Error(t, err)
 	assert.False(t, assignRoleResp)
 
-	// We should create the user first
-	user, err := apiClient.UserCreate(&model.UserCreateRequest{EthAddress: testAddress.Hex()})
+	// We should create the userId first
+	userId, err := apiClient.UserCreate(&model.UserCreateRequest{EthAddress: testAddress.Hex()})
 	assert.NoError(t, err)
-	assert.NotZero(t, user)
+	assert.NotZero(t, userId)
 
-	assignRoleResp, err = apiClient.AssignRole(&model.AssignRoleRequest{UserID: uint(user), Role: "test"})
+	err = apiClient.UserUpdate(userId, &model.UserUpdateRequest{Metadata: map[string]any{
+		"email": "test@test.com",
+	}})
+	assert.NoError(t, err)
+
+	user, err := apiClient.UserGetByID(userId)
+	assert.NoError(t, err)
+	assert.NotNil(t, user)
+	assert.Equal(t, "test@test.com", user.Metadata["email"])
+
+	assignRoleResp, err = apiClient.AssignRole(&model.AssignRoleRequest{UserID: uint(userId), Role: "test"})
 	assert.NoError(t, err)
 	assert.True(t, assignRoleResp)
 
@@ -180,7 +190,7 @@ func TestClient_RBAC(t *testing.T) {
 	assert.True(t, deleteRoleHierarchyResp)
 
 	// RemoveUserRole
-	removeUserRoleResp, err := apiClient.RemoveUserRole(strconv.FormatUint(user, 10), "test")
+	removeUserRoleResp, err := apiClient.RemoveUserRole(strconv.FormatUint(userId, 10), "test")
 	assert.NoError(t, err)
 	assert.True(t, removeUserRoleResp)
 
