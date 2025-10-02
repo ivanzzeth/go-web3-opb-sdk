@@ -71,7 +71,7 @@ type SiweVerifyResponse struct {
 // SiweUser user information
 type SiweUser struct {
 	UserID        uint64 `json:"userId"`
-	WalletAddress string `json:"wallet_address"`
+	WalletAddress string `json:"walletAddress"`
 }
 
 // SiweJwtPayload JWT payload
@@ -112,7 +112,7 @@ func (s SiweJwtPayload) GetSubject() (string, error) {
 // SiweAuth user authentication record
 type SiweAuth struct {
 	ID            uint      `json:"id" gorm:"primaryKey"`
-	WalletAddress string    `json:"wallet_address" gorm:"uniqueIndex;not null"`
+	WalletAddress string    `json:"walletAddress" gorm:"uniqueIndex;not null"`
 	Created       time.Time `json:"created"`
 	LastLogin     time.Time `json:"last_login"`
 }

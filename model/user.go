@@ -17,7 +17,7 @@ type User struct {
 
 // UserEthWallet user Ethereum wallet table
 type UserEthWallet struct {
-	UserID  uint64 `json:"user_id" gorm:"primaryKey"`
+	UserID  uint64 `json:"userId" gorm:"primaryKey"`
 	Address string `json:"address" gorm:"primaryKey;size:42"` // Ethereum address, 42 characters
 }
 
@@ -36,7 +36,7 @@ type UserListResponse struct {
 }
 
 type UserCreateRequest struct {
-	EthAddress string `json:"eth_address"`
+	EthAddress string `json:"ethAddress"`
 }
 
 type UserUpdateRequest struct {
