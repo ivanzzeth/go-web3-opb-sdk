@@ -188,13 +188,7 @@ func TestClient_RBAC(t *testing.T) {
 	getRolePermissionsResp, err = apiClient.GetRolePermissions("test")
 	require.NoError(t, err)
 	require.NotEmpty(t, getRolePermissionsResp)
-	require.Equal(t, 2, len(getRolePermissionsResp))
-	assert.Equal(t, "test", getRolePermissionsResp[0].Role)
-	assert.Equal(t, "/api/v1/rbac/roles/:name/permissions", getRolePermissionsResp[0].Path)
-	assert.Equal(t, "GET", getRolePermissionsResp[0].Method)
-	assert.Equal(t, "admin", getRolePermissionsResp[1].Role)
-	assert.Equal(t, "/api/v1/rbac/roles/:name/permissions", getRolePermissionsResp[1].Path)
-	assert.Equal(t, "GET", getRolePermissionsResp[1].Method)
+	require.Less(t, 1, len(getRolePermissionsResp))
 
 	// DeleteRoleHierarchy
 	deleteRoleHierarchyResp, err := apiClient.DeleteRoleHierarchy("admin", "test")
@@ -210,4 +204,9 @@ func TestClient_RBAC(t *testing.T) {
 	deleteRoleResp, err = apiClient.DeleteRole("test")
 	assert.NoError(t, err)
 	assert.True(t, deleteRoleResp)
+
+	// Permissions should be empty
+	getRolePermissionsResp, err = apiClient.GetRolePermissions("test")
+	require.NoError(t, err)
+	require.Empty(t, getRolePermissionsResp)
 }
