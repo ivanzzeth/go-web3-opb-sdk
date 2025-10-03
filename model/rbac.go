@@ -19,7 +19,7 @@ type GetRolePermissionsResponse struct {
 }
 
 type AssignRoleRequest struct {
-	UserID uint   `json:"userId" binding:"required"`
+	UserID string `json:"userId" binding:"required"`
 	Role   string `json:"role" binding:"required"`
 }
 
