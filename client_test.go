@@ -10,6 +10,7 @@ import (
 	"github.com/ivanzzeth/go-web3-opb-sdk/model"
 	"github.com/spruceid/siwe-go"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewApiClient(t *testing.T) {
@@ -137,13 +138,13 @@ func TestClient_RBAC(t *testing.T) {
 
 	getRolePermissionsResp, err := apiClient.GetRolePermissions("test")
 	assert.NoError(t, err)
-	assert.NotEmpty(t, getRolePermissionsResp)
+	assert.Empty(t, getRolePermissionsResp)
 
 	deleteRoleResp, err := apiClient.DeleteRole("test")
 	assert.NoError(t, err)
 	assert.True(t, deleteRoleResp)
 
-	assignRoleResp, err := apiClient.AssignRole(&model.AssignRoleRequest{UserID: 1, Role: "test"})
+	assignRoleResp, err := apiClient.AssignRole(&model.AssignRoleRequest{UserID: "1", Role: "test"})
 	assert.Error(t, err)
 	assert.False(t, assignRoleResp)
 
@@ -162,7 +163,7 @@ func TestClient_RBAC(t *testing.T) {
 	assert.NotNil(t, user)
 	assert.Equal(t, "test@test.com", user.Metadata["email"])
 
-	assignRoleResp, err = apiClient.AssignRole(&model.AssignRoleRequest{UserID: uint(userId), Role: "test"})
+	assignRoleResp, err = apiClient.AssignRole(&model.AssignRoleRequest{UserID: strconv.FormatUint(userId, 10), Role: "test"})
 	assert.NoError(t, err)
 	assert.True(t, assignRoleResp)
 
@@ -183,6 +184,17 @@ func TestClient_RBAC(t *testing.T) {
 	createRoleHierarchyResp, err := apiClient.CreateRoleHierarchy(&model.RoleHierarchyRequest{RoleHierarchy: []model.RoleHierarchy{{ChildRole: "test", ParentRole: "admin"}}})
 	assert.NoError(t, err)
 	assert.True(t, createRoleHierarchyResp)
+
+	getRolePermissionsResp, err = apiClient.GetRolePermissions("test")
+	require.NoError(t, err)
+	require.NotEmpty(t, getRolePermissionsResp)
+	require.Equal(t, 2, len(getRolePermissionsResp))
+	assert.Equal(t, "test", getRolePermissionsResp[0].Role)
+	assert.Equal(t, "/api/v1/rbac/roles/:name/permissions", getRolePermissionsResp[0].Path)
+	assert.Equal(t, "GET", getRolePermissionsResp[0].Method)
+	assert.Equal(t, "admin", getRolePermissionsResp[1].Role)
+	assert.Equal(t, "/api/v1/rbac/roles/:name/permissions", getRolePermissionsResp[1].Path)
+	assert.Equal(t, "GET", getRolePermissionsResp[1].Method)
 
 	// DeleteRoleHierarchy
 	deleteRoleHierarchyResp, err := apiClient.DeleteRoleHierarchy("admin", "test")
