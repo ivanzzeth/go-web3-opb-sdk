@@ -184,8 +184,8 @@ func TestClient_RBAC(t *testing.T) {
 	assert.NotEmpty(t, getRolePermissionsResp)
 	assert.Equal(t, 1, len(getRolePermissionsResp))
 	assert.Equal(t, "test", getRolePermissionsResp[0].Role)
-	assert.Equal(t, "/api/v1/rbac/roles/:name/permissions", getRolePermissionsResp[0].Path)
-	assert.Equal(t, "GET", getRolePermissionsResp[0].Method)
+	assert.Equal(t, "/api/v1/rbac/roles/:name/permissions", getRolePermissionsResp[0].Resource)
+	assert.Equal(t, "GET", getRolePermissionsResp[0].Action)
 
 	// CreateRoleHierarchy
 	createRoleHierarchyResp, err := apiClient.CreateRoleHierarchy(&model.RoleHierarchyRequest{RoleHierarchy: []model.RoleHierarchy{{ChildRole: "test", ParentRole: "admin"}}})

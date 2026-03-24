@@ -6,6 +6,7 @@ import "time"
 type Project struct {
 	ID          uint64     `json:"id,string"`
 	Name        string     `json:"name"`
+	Slug        string     `json:"slug"`
 	Description string     `json:"description,omitempty"`
 	Status      string     `json:"status"`
 	OwnerUserID uint64     `json:"ownerUserId,string"`
@@ -24,12 +25,14 @@ const (
 // CreateProjectRequest is the request body for creating a project.
 type CreateProjectRequest struct {
 	Name        string `json:"name"`
+	Slug        string `json:"slug"`
 	Description string `json:"description,omitempty"`
 }
 
 // UpdateProjectRequest is the request body for updating a project.
 type UpdateProjectRequest struct {
 	Name        *string `json:"name,omitempty"`
+	Slug        *string `json:"slug,omitempty"`
 	Description *string `json:"description,omitempty"`
 }
 
