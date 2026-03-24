@@ -51,6 +51,6 @@ func (p *ProjectScope) Update(req *model.UpdateProjectRequest) (*model.Project, 
 
 // Delete deletes the project.
 func (p *ProjectScope) Delete() error {
-	_, err := doDelete[bool](p.client, p.projectURL(""))
+	_, err := doDelete[any](p.client, p.projectURL(""))
 	return err
 }

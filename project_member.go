@@ -30,7 +30,7 @@ func (p *ProjectScope) UpdateMemberRole(userID, role string) error {
 // RemoveMember removes a member from the project.
 func (p *ProjectScope) RemoveMember(userID string) error {
 	url := fmt.Sprintf("%s/%s", p.projectURL("/members"), userID)
-	_, err := doDelete[bool](p.client, url)
+	_, err := doDelete[any](p.client, url)
 	return err
 }
 

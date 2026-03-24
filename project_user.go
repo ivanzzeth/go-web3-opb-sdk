@@ -24,6 +24,6 @@ func (p *ProjectScope) RegisterUser(userID string) error {
 // UnregisterUser unregisters a user from the project.
 func (p *ProjectScope) UnregisterUser(userID string) error {
 	url := fmt.Sprintf("%s/%s", p.projectURL("/users"), userID)
-	_, err := doDelete[bool](p.client, url)
+	_, err := doDelete[any](p.client, url)
 	return err
 }

@@ -185,20 +185,22 @@ func (c *Client) GetCachedJwtToken() string {
 	if c.cachedJwtToken == "" {
 		c.waitSignIn()
 	}
+
+	// Try local verification first (fast, no network call).
 	valid, err := c.JwtVerifyLocally(&model.JwtVerifyRequest{Token: c.cachedJwtToken})
-	log.Println("GetCachedJwtToken JwtVerifyLocally: ", valid, err)
-	if err != nil || !valid.Valid {
-		// Refresh token first
-		newTokenResp, err := c.JwtRefresh(&model.JwtRefreshRequest{Token: c.cachedJwtToken})
-		log.Println("GetCachedJwtToken JwtRefresh: ", newTokenResp, err)
-		if err == nil && newTokenResp.Token != c.cachedJwtToken {
-			c.cachedJwtToken = newTokenResp.Token
-		} else {
-			// If same token, sign in again
-			c.waitSignIn()
-		}
+	if err == nil && valid.Valid {
+		return c.cachedJwtToken
 	}
 
+	// Local verify failed (e.g., JWKS not available, HS256 vs RSA mismatch).
+	// Try remote verification — if the server says the token is valid, use it as-is.
+	valid, err = c.JwtVerify(&model.JwtVerifyRequest{Token: c.cachedJwtToken})
+	if err == nil && valid.Valid {
+		return c.cachedJwtToken
+	}
+
+	// Token is truly invalid or expired — re-sign-in to get a fresh token with roles.
+	c.waitSignIn()
 	return c.cachedJwtToken
 }
 

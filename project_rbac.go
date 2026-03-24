@@ -59,7 +59,7 @@ func (r *ProjectRBACScope) AssignRole(req *model.AssignRoleRequest) error {
 // RevokeRole removes a role from a user in the project domain.
 func (r *ProjectRBACScope) RevokeRole(roleName, userID string) error {
 	url := fmt.Sprintf("%s/%s/users/%s", r.rbacURL("/roles"), roleName, userID)
-	_, err := doDelete[bool](r.client, url)
+	_, err := doDelete[any](r.client, url)
 	return err
 }
 

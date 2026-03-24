@@ -20,13 +20,13 @@ func (p *ProjectScope) ListAPIKeys(page, pageSize int) (*model.PaginationResult[
 // RevokeAPIKey revokes a single API key.
 func (p *ProjectScope) RevokeAPIKey(keyID string) error {
 	url := fmt.Sprintf("%s/%s", p.projectURL("/api-keys"), keyID)
-	_, err := doDelete[bool](p.client, url)
+	_, err := doDelete[any](p.client, url)
 	return err
 }
 
 // RevokeAllAPIKeys revokes all API keys for the project.
 func (p *ProjectScope) RevokeAllAPIKeys() error {
-	_, err := doDelete[bool](p.client, p.projectURL("/api-keys"))
+	_, err := doDelete[any](p.client, p.projectURL("/api-keys"))
 	return err
 }
 
