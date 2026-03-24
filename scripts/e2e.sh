@@ -6,6 +6,10 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SDK_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 AUTH_DIR="$(cd "$SDK_DIR/../../../web3-opb-auth" && pwd)"
 
+# Fixed test keypairs — must match harness constants in e2e/harness.go
+ADMIN_PRIVATE_KEY="0ff2c38b76723d6a9a4419f76cdf5e5f686683c779c4af6eca00832b4261333f"
+USER_PRIVATE_KEY="0b7c6594b9db0acf1c7ccd05d29b80ab00b973e0ea4262f4feebdcaca0a4ca3d"
+
 echo "=== Starting auth service via E2E harness ==="
 
 # Write a tiny Go test that starts the harness and blocks until killed
@@ -65,16 +69,11 @@ if [ -z "${AUTH_URL:-}" ]; then
 	exit 1
 fi
 
-# Generate a test private key and sign in as admin
-# The harness's admin address is 0x0000000000000000000000000000000000000001
-# We need a matching private key — but the harness creates the admin by address directly.
-# For SDK tests, we need a regular user (the harness grants "user" role).
-# Generate a fresh key — the SDK will auto-sign-in via SIWE.
-PRIVATE_KEY_HEX=$(openssl rand -hex 32)
-
 echo "=== Running SDK E2E tests ==="
 cd "$SDK_DIR"
-AUTH_BASE_URL="$AUTH_URL" PRIVATE_KEY_HEX="$PRIVATE_KEY_HEX" \
+AUTH_BASE_URL="$AUTH_URL" \
+	ADMIN_PRIVATE_KEY="$ADMIN_PRIVATE_KEY" \
+	USER_PRIVATE_KEY="$USER_PRIVATE_KEY" \
 	go test -run "TestProject_" -v -count=1 -timeout 60s ./... 2>&1
 
 echo "=== SDK E2E tests complete ==="

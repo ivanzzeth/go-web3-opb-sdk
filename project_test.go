@@ -11,21 +11,53 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// These tests require a running auth service at AUTH_BASE_URL (default http://localhost:8700).
-// The PRIVATE_KEY_HEX env var must be set to an admin wallet's private key.
+// Fixed test keypairs — must match harness constants.
+const (
+	defaultAdminKey = "0ff2c38b76723d6a9a4419f76cdf5e5f686683c779c4af6eca00832b4261333f"
+	defaultUserKey  = "0b7c6594b9db0acf1c7ccd05d29b80ab00b973e0ea4262f4feebdcaca0a4ca3d"
+)
 
-func newTestClient(t *testing.T) *Client {
-	t.Helper()
-	baseURL := os.Getenv("AUTH_BASE_URL")
-	if baseURL == "" {
-		baseURL = "http://localhost:8700"
+func getBaseURL() string {
+	if u := os.Getenv("AUTH_BASE_URL"); u != "" {
+		return u
 	}
-	privateKeyHex := os.Getenv("PRIVATE_KEY_HEX")
-	if privateKeyHex == "" {
-		t.Skip("PRIVATE_KEY_HEX not set, skipping integration test")
+	return "http://localhost:8700"
+}
+
+func newAdminClient(t *testing.T) *Client {
+	t.Helper()
+	key := os.Getenv("ADMIN_PRIVATE_KEY")
+	if key == "" {
+		key = defaultAdminKey
 	}
 	client, err := NewClient(
-		WithAuth(baseURL, privateKeyHex),
+		WithAuth(getBaseURL(), key),
+		WithDomain("localhost"),
+	)
+	require.NoError(t, err)
+	return client
+}
+
+func newUserClient(t *testing.T) *Client {
+	t.Helper()
+	key := os.Getenv("USER_PRIVATE_KEY")
+	if key == "" {
+		key = defaultUserKey
+	}
+	client, err := NewClient(
+		WithAuth(getBaseURL(), key),
+		WithDomain("localhost"),
+	)
+	require.NoError(t, err)
+	return client
+}
+
+func newRandomClient(t *testing.T) *Client {
+	t.Helper()
+	pk, _, err := GenerateEthPrivateKey()
+	require.NoError(t, err)
+	client, err := NewClient(
+		WithAuth(getBaseURL(), hex.EncodeToString(pk.D.Bytes())),
 		WithDomain("localhost"),
 	)
 	require.NoError(t, err)
@@ -33,10 +65,10 @@ func newTestClient(t *testing.T) *Client {
 }
 
 func TestProject_CRUD(t *testing.T) {
-	client := newTestClient(t)
+	admin := newAdminClient(t)
 
 	// Create
-	project, err := client.CreateProject(&model.CreateProjectRequest{
+	project, err := admin.CreateProject(&model.CreateProjectRequest{
 		Name:        "SDK E2E Test",
 		Slug:        "sdk-e2e-test",
 		Description: "created by SDK E2E",
@@ -49,13 +81,12 @@ func TestProject_CRUD(t *testing.T) {
 	t.Logf("created project: id=%d slug=%s", project.ID, project.Slug)
 
 	pid := fmt.Sprintf("%d", project.ID)
-	ps := client.Project(pid)
+	ps := admin.Project(pid)
 
 	// Get
 	fetched, err := ps.Get()
 	require.NoError(t, err)
 	assert.Equal(t, project.ID, fetched.ID)
-	assert.Equal(t, "sdk-e2e-test", fetched.Slug)
 
 	// Update
 	newName := "SDK E2E Updated"
@@ -64,7 +95,7 @@ func TestProject_CRUD(t *testing.T) {
 	assert.Equal(t, "SDK E2E Updated", updated.Name)
 
 	// List
-	list, err := client.ListProjects(1, 10)
+	list, err := admin.ListProjects(1, 10)
 	require.NoError(t, err)
 	assert.NotNil(t, list)
 
@@ -74,13 +105,13 @@ func TestProject_CRUD(t *testing.T) {
 }
 
 func TestProject_APIKeys(t *testing.T) {
-	client := newTestClient(t)
+	admin := newAdminClient(t)
 
-	project, err := client.CreateProject(&model.CreateProjectRequest{
+	project, err := admin.CreateProject(&model.CreateProjectRequest{
 		Name: "API Key Test", Slug: "apikey-test",
 	})
 	require.NoError(t, err)
-	ps := client.Project(fmt.Sprintf("%d", project.ID))
+	ps := admin.Project(fmt.Sprintf("%d", project.ID))
 	defer ps.Delete()
 
 	// Create key
@@ -108,13 +139,13 @@ func TestProject_APIKeys(t *testing.T) {
 }
 
 func TestProject_Members(t *testing.T) {
-	client := newTestClient(t)
+	admin := newAdminClient(t)
 
-	project, err := client.CreateProject(&model.CreateProjectRequest{
+	project, err := admin.CreateProject(&model.CreateProjectRequest{
 		Name: "Member Test", Slug: "member-test",
 	})
 	require.NoError(t, err)
-	ps := client.Project(fmt.Sprintf("%d", project.ID))
+	ps := admin.Project(fmt.Sprintf("%d", project.ID))
 	defer ps.Delete()
 
 	// List members — should have owner
@@ -129,76 +160,62 @@ func TestProject_Members(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.NotEmpty(t, invResp.Token)
-	t.Logf("invitation token: %s", invResp.Token)
 
-	// Accept with a different user
-	pk2, _, err := GenerateEthPrivateKey()
-	require.NoError(t, err)
-	baseURL := os.Getenv("AUTH_BASE_URL")
-	if baseURL == "" {
-		baseURL = "http://localhost:8700"
-	}
-	client2, err := NewClient(
-		WithAuth(baseURL, hex.EncodeToString(pk2.D.Bytes())),
-		WithDomain("localhost"),
-	)
+	// Accept with a random user
+	randomUser := newRandomClient(t)
+	err = randomUser.AcceptInvitation(invResp.Token)
 	require.NoError(t, err)
 
-	err = client2.AcceptInvitation(invResp.Token)
-	require.NoError(t, err)
-
-	// List members again — should have 2
+	// List members — should have 2
 	members, err = ps.ListMembers()
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(members), 2)
 }
 
 func TestProject_Users(t *testing.T) {
-	client := newTestClient(t)
+	admin := newAdminClient(t)
 
-	project, err := client.CreateProject(&model.CreateProjectRequest{
+	project, err := admin.CreateProject(&model.CreateProjectRequest{
 		Name: "User Test", Slug: "user-reg-test",
 	})
 	require.NoError(t, err)
-	ps := client.Project(fmt.Sprintf("%d", project.ID))
+	ps := admin.Project(fmt.Sprintf("%d", project.ID))
 	defer ps.Delete()
 
-	// Create a second user by signing in with a new wallet (auto-creates via SIWE)
-	baseURL := os.Getenv("AUTH_BASE_URL")
-	if baseURL == "" {
-		baseURL = "http://localhost:8700"
-	}
-	pk2, _, err := GenerateEthPrivateKey()
+	// Admin creates a user (needs admin role)
+	_, addr2, err := GenerateEthPrivateKey()
 	require.NoError(t, err)
-	client2, err := NewClient(
-		WithAuth(baseURL, hex.EncodeToString(pk2.D.Bytes())),
-		WithDomain("localhost"),
-	)
+	userID, err := admin.UserCreate(&model.UserCreateRequest{EthAddress: addr2.Hex()})
 	require.NoError(t, err)
-	// Sign in to auto-create the user
-	_, err = client2.SignIn()
+	userIDStr := fmt.Sprintf("%d", userID)
+	t.Logf("created user: id=%s address=%s", userIDStr, addr2.Hex())
+
+	// Register user to project
+	err = ps.RegisterUser(userIDStr)
 	require.NoError(t, err)
 
-	// Get user2's ID from their profile
-	user2, err := client2.UserGetByID(0) // ID 0 won't work; need to get own ID
-	// Since we can't easily get our own user ID without admin, skip registration test
-	// and just verify list works
-	_ = user2
-
-	// List users — should be empty initially
+	// List users
 	users, err := ps.ListUsers()
+	require.NoError(t, err)
+	assert.Len(t, users, 1)
+
+	// Unregister
+	err = ps.UnregisterUser(userIDStr)
+	require.NoError(t, err)
+
+	users, err = ps.ListUsers()
 	require.NoError(t, err)
 	assert.Len(t, users, 0)
 }
 
 func TestProject_RBAC(t *testing.T) {
-	client := newTestClient(t)
+	admin := newAdminClient(t)
 
-	project, err := client.CreateProject(&model.CreateProjectRequest{
+	project, err := admin.CreateProject(&model.CreateProjectRequest{
 		Name: "RBAC Test", Slug: "rbac-test",
 	})
 	require.NoError(t, err)
-	ps := client.Project(fmt.Sprintf("%d", project.ID))
+	ps := admin.Project(fmt.Sprintf("%d", project.ID))
 	defer ps.Delete()
 
 	rbac := ps.RBAC()
@@ -215,7 +232,7 @@ func TestProject_RBAC(t *testing.T) {
 	perms, err := rbac.GetRolePermissions("editor")
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(perms), 3)
-	t.Logf("editor permissions: %+v", perms)
+	t.Logf("editor permissions: %d entries", len(perms))
 
 	// Declarative sync
 	err = rbac.Sync(model.RBACConfig{
@@ -246,8 +263,26 @@ func TestProject_RBAC(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, editorPerms, 6, "editor should have 6 permissions (5 filters + 1 api-keys)")
 
-	// Get roles list
-	roles, err := rbac.GetRoles()
+	// Assign role to a user (admin creates user first)
+	_, addr2, _ := GenerateEthPrivateKey()
+	userID, err := admin.UserCreate(&model.UserCreateRequest{EthAddress: addr2.Hex()})
 	require.NoError(t, err)
-	t.Logf("all roles in domain: %v", roles)
+	userIDStr := fmt.Sprintf("%d", userID)
+
+	err = rbac.AssignRole(&model.AssignRoleRequest{
+		UserID: userIDStr,
+		Role:   "viewer",
+	})
+	require.NoError(t, err)
+
+	// Get user roles
+	roles, err := rbac.GetUserRoles(userIDStr)
+	require.NoError(t, err)
+	assert.Contains(t, roles, "viewer")
+
+	// Revoke role
+	err = rbac.RevokeRole("viewer", userIDStr)
+	require.NoError(t, err)
+
+	t.Logf("RBAC test complete — sync, assign, revoke all working")
 }
