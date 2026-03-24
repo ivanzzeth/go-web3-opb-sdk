@@ -9,9 +9,9 @@ type GetRolesResponse struct {
 }
 
 type GrantPermissionRequest struct {
-	Role    string   `json:"role" binding:"required"`
-	Path    string   `json:"path" binding:"required"`
-	Methods []string `json:"methods" binding:"required"`
+	Role     string   `json:"role" binding:"required"`
+	Resource string   `json:"resource" binding:"required"`
+	Actions  []string `json:"actions" binding:"required"`
 }
 
 type GetRolePermissionsResponse struct {
@@ -24,9 +24,9 @@ type AssignRoleRequest struct {
 }
 
 type RolePermission struct {
-	Role   string `json:"role" binding:"required"`
-	Path   string `json:"path" binding:"required"`
-	Method string `json:"method" binding:"required"`
+	Role     string `json:"role" binding:"required"`
+	Resource string `json:"resource" binding:"required"`
+	Action   string `json:"action" binding:"required"`
 }
 
 type RoleHierarchy struct {
@@ -36,4 +36,9 @@ type RoleHierarchy struct {
 
 type RoleHierarchyRequest struct {
 	RoleHierarchy []RoleHierarchy `json:"roleHierarchy" binding:"required"`
+}
+
+// GetUserRolesResponse response for getting user roles.
+type GetUserRolesResponse struct {
+	Roles []string `json:"roles"`
 }

@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewApiClient(t *testing.T) {
+func TestNewClient(t *testing.T) {
 	baseURL := "http://localhost:8700"
 	privateKey, address, err := GenerateEthPrivateKey()
 	assert.NoError(t, err)
@@ -22,7 +22,10 @@ func TestNewApiClient(t *testing.T) {
 
 	privateKeyHex := hex.EncodeToString(privateKey.D.Bytes())
 
-	apiClient, err := NewApiClient(baseURL, "localhost", "v1", "", privateKeyHex)
+	apiClient, err := NewClient(
+		WithAuth(baseURL, privateKeyHex),
+		WithDomain("localhost"),
+	)
 	assert.NoError(t, err)
 	assert.NotNil(t, apiClient)
 
@@ -72,14 +75,15 @@ func TestNewApiClient(t *testing.T) {
 
 func TestClient_SignIn(t *testing.T) {
 	baseURL := "http://localhost:8700"
-	privateKey, address, err := GenerateEthPrivateKey()
+	privateKey, _, err := GenerateEthPrivateKey()
 	assert.NoError(t, err)
-	assert.NotNil(t, privateKey)
-	assert.NotNil(t, address)
 
 	privateKeyHex := hex.EncodeToString(privateKey.D.Bytes())
 
-	apiClient, err := NewApiClient(baseURL, "localhost", "v1", "", privateKeyHex)
+	apiClient, err := NewClient(
+		WithAuth(baseURL, privateKeyHex),
+		WithDomain("localhost"),
+	)
 	assert.NoError(t, err)
 	assert.NotNil(t, apiClient)
 
@@ -125,7 +129,10 @@ func TestClient_RBAC(t *testing.T) {
 	_, testAddress, err := GenerateEthPrivateKey()
 	assert.NoError(t, err)
 
-	apiClient, err := NewApiClient(baseURL, "localhost", "v1", "", privateKeyHex)
+	apiClient, err := NewClient(
+		WithAuth(baseURL, privateKeyHex),
+		WithDomain("localhost"),
+	)
 	assert.NoError(t, err)
 
 	createRoleResp, err := apiClient.CreateRole(&model.CreateRoleRequest{Name: "test"})
@@ -167,7 +174,7 @@ func TestClient_RBAC(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, assignRoleResp)
 
-	grantRolePathPermissionsResp, err := apiClient.GrantRolePathPermissions(&model.GrantPermissionRequest{Role: "test", Path: "/api/v1/rbac/roles/:name/permissions", Methods: []string{"GET"}})
+	grantRolePathPermissionsResp, err := apiClient.GrantResourcePermissions(&model.GrantPermissionRequest{Role: "test", Resource: "/api/v1/rbac/roles/:name/permissions", Actions: []string{"GET"}})
 	assert.NoError(t, err)
 	assert.True(t, grantRolePathPermissionsResp)
 

@@ -57,7 +57,7 @@ func (c *Client) signIn() (string, error) {
 			return "", err
 		}
 		// TODO: Configurable
-		message, err := siwe.InitMessage(c.domain, c.ethAddress.Hex(), c.authBaseURL, nonce, map[string]interface{}{
+		message, err := siwe.InitMessage(c.domain, c.ethAddress.Hex(), c.authBaseURL(), nonce, map[string]interface{}{
 			"issuedAt":       time.Now().UTC().Format(time.RFC3339),
 			"expirationTime": time.Now().Add(5 * time.Minute).UTC().Format(time.RFC3339),
 		})
@@ -79,7 +79,7 @@ func (c *Client) signIn() (string, error) {
 }
 
 func (c *Client) JwtVerify(token *model.JwtVerifyRequest) (*model.JwtVerifyResponse, error) {
-	url := fmt.Sprintf("%s/api/%s/jwt/verify", c.authBaseURL, c.version)
+	url := fmt.Sprintf("%s/api/%s/jwt/verify", c.authBaseURL(), c.version)
 	tokenJson, err := json.Marshal(token)
 	if err != nil {
 		return nil, err
@@ -108,7 +108,7 @@ func (c *Client) GetJWKS() (*model.JWKSResponse, error) {
 	var jwksResp model.JWKSResponse
 
 	if c.cachedJwksTime == nil || time.Since(*c.cachedJwksTime) > 10*time.Minute {
-		url := fmt.Sprintf("%s/.well-known/jwks.json", c.authBaseURL)
+		url := fmt.Sprintf("%s/.well-known/jwks.json", c.authBaseURL())
 
 		resp, err := c.httpClient.Get(url)
 		if err != nil {
@@ -140,7 +140,7 @@ func (c *Client) JwtVerifyLocally(token *model.JwtVerifyRequest) (*model.JwtVeri
 	// 	return nil, err
 	// }
 
-	url := fmt.Sprintf("%s/.well-known/jwks.json", c.authBaseURL)
+	url := fmt.Sprintf("%s/.well-known/jwks.json", c.authBaseURL())
 
 	jwtToken, err := verifyJWT(context.Background(), c.httpClient, token.Token, url)
 	if err != nil {
@@ -154,7 +154,7 @@ func (c *Client) JwtVerifyLocally(token *model.JwtVerifyRequest) (*model.JwtVeri
 }
 
 func (c *Client) JwtRefresh(token *model.JwtRefreshRequest) (*model.JwtRefreshResponse, error) {
-	url := fmt.Sprintf("%s/api/%s/jwt/refresh", c.authBaseURL, c.version)
+	url := fmt.Sprintf("%s/api/%s/jwt/refresh", c.authBaseURL(), c.version)
 	tokenJson, err := json.Marshal(token)
 	if err != nil {
 		return nil, err

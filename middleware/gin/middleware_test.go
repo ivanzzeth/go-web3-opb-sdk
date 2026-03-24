@@ -36,7 +36,7 @@ func newTestServer(t *testing.T) *testServer {
 	adminPrivateKeyHex := os.Getenv("PRIVATE_KEY_HEX")
 	assert.NotEmpty(t, adminPrivateKeyHex)
 	baseURL := "http://localhost:8700"
-	apiNamespace := "middleware-test"
+	projectName := "middleware-test"
 
 	// Generate a valid private key for testing
 	userPrivateKey, userAddress, err := web3opb.GenerateEthPrivateKey()
@@ -44,23 +44,17 @@ func newTestServer(t *testing.T) *testServer {
 		t.Fatalf("failed to generate private key: %v", err)
 	}
 
-	client, err := web3opb.NewApiClient(
-		baseURL,     // Test server URL
-		"localhost", // Domain
-		"v1",        // Version
-		apiNamespace,
-		adminPrivateKeyHex, // Generated private key
+	client, err := web3opb.NewClient(
+		web3opb.WithAuth(baseURL, adminPrivateKeyHex),
+		web3opb.WithDomain("localhost"),
 	)
 	if err != nil {
 		t.Fatalf("failed to create client: %v", err)
 	}
 
-	userClient, err := web3opb.NewApiClient(
-		baseURL,     // Test server URL
-		"localhost", // Domain
-		"v1",        // Version
-		apiNamespace,
-		hex.EncodeToString(userPrivateKey.D.Bytes()), // Generated private key
+	userClient, err := web3opb.NewClient(
+		web3opb.WithAuth(baseURL, hex.EncodeToString(userPrivateKey.D.Bytes())),
+		web3opb.WithDomain("localhost"),
 	)
 	if err != nil {
 		t.Fatalf("failed to create client: %v", err)
@@ -85,17 +79,17 @@ func newTestServer(t *testing.T) *testServer {
 		c.JSON(200, gin.H{"message": "public endpoint"})
 	})
 
-	router.GET("/protected", AuthMiddleware(client), func(c *gin.Context) {
+	router.GET("/protected", AuthMiddleware(client, projectName), func(c *gin.Context) {
 		userId := c.GetString("userId")
 		c.JSON(200, gin.H{"message": "protected endpoint", "userId": userId})
 	})
 
-	router.GET("/admin", AuthMiddleware(client), func(c *gin.Context) {
+	router.GET("/admin", AuthMiddleware(client, projectName), func(c *gin.Context) {
 		userId := c.GetString("userId")
 		c.JSON(200, gin.H{"message": "admin endpoint", "userId": userId})
 	})
 
-	router.POST("/admin/users", AuthMiddleware(client), func(c *gin.Context) {
+	router.POST("/admin/users", AuthMiddleware(client, projectName), func(c *gin.Context) {
 		userId := c.GetString("userId")
 		c.JSON(200, gin.H{"message": "create user", "userId": userId})
 	})
@@ -107,28 +101,28 @@ func newTestServer(t *testing.T) *testServer {
 		t.Fatalf("failed to create user: %v", err)
 	}
 
-	_, err = client.GrantRolePathPermissions(&model.GrantPermissionRequest{
+	_, err = client.GrantResourcePermissions(&model.GrantPermissionRequest{
 		Role:    "user",
-		Path:    "/protected",
-		Methods: []string{"GET"},
+		Resource:    "/protected",
+		Actions: []string{"GET"},
 	})
 	if err != nil {
 		t.Fatalf("failed to grant role path permissions: %v", err)
 	}
 
-	_, err = client.GrantRolePathPermissions(&model.GrantPermissionRequest{
+	_, err = client.GrantResourcePermissions(&model.GrantPermissionRequest{
 		Role:    "admin",
-		Path:    "/admin",
-		Methods: []string{"GET", "POST"},
+		Resource:    "/admin",
+		Actions: []string{"GET", "POST"},
 	})
 	if err != nil {
 		t.Fatalf("failed to grant role path permissions: %v", err)
 	}
 
-	_, err = client.GrantRolePathPermissions(&model.GrantPermissionRequest{
+	_, err = client.GrantResourcePermissions(&model.GrantPermissionRequest{
 		Role:    "admin",
-		Path:    "/admin/users",
-		Methods: []string{"GET", "POST"},
+		Resource:    "/admin/users",
+		Actions: []string{"GET", "POST"},
 	})
 	if err != nil {
 		t.Fatalf("failed to grant role path permissions: %v", err)
@@ -426,12 +420,9 @@ func TestIntegrationWithRealClient(t *testing.T) {
 	}
 
 	privateKeyHex := hex.EncodeToString(privateKey.D.Bytes())
-	client, err := web3opb.NewApiClient(
-		"http://localhost:8700", // Test server URL
-		"localhost",             // Domain
-		"v1",                    // Version
-		"",
-		privateKeyHex, // Generated private key
+	client, err := web3opb.NewClient(
+		web3opb.WithAuth("http://localhost:8700", privateKeyHex),
+		web3opb.WithDomain("localhost"),
 	)
 	if err != nil {
 		t.Skip("Skipping integration test: auth server not available")

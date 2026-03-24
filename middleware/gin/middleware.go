@@ -42,8 +42,10 @@ func JwtMiddleware(client *web3opb.Client) gin.HandlerFunc {
 	}
 }
 
-// AuthMiddleware authentication middleware
-func AuthMiddleware(client *web3opb.Client) gin.HandlerFunc {
+// AuthMiddleware authentication middleware.
+// projectName is the kebab-case project name used to prefix RBAC permission paths
+// (e.g. "evm-filter" → path becomes "/api/evm-filter/v1/filters").
+func AuthMiddleware(client *web3opb.Client, projectName string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		tokenString := c.GetHeader("Authorization")
 		if tokenString == "" {
@@ -71,8 +73,8 @@ func AuthMiddleware(client *web3opb.Client) gin.HandlerFunc {
 		// Check if user has permission to access the resource
 		// Use FullPath() to get the route pattern (e.g., /users/:id instead of /users/123)
 		path := c.FullPath()
-		//Add apiNamespace to path
-		path = "/api/" + client.ApiNamespace + path
+		// Prefix with project name for RBAC path matching
+		path = "/api/" + projectName + path
 		method := c.Request.Method
 		payloadJson, err := json.Marshal(result.Payload)
 		if err != nil {
@@ -239,4 +241,48 @@ func RequestIDMiddleware() gin.HandlerFunc {
 		c.Header("X-Request-ID", requestID)
 		c.Next()
 	}
+}
+
+// ResourceMap maps HTTP method+route patterns to semantic resource+action pairs.
+// Downstream services register their routes at startup, then the middleware
+// uses Resolve() to translate incoming requests before checking permissions.
+type ResourceMap struct {
+	entries []resourceEntry
+}
+
+type resourceEntry struct {
+	httpMethod   string
+	routePattern string
+	resource     string
+	action       string
+}
+
+// NewResourceMap creates an empty ResourceMap.
+func NewResourceMap() *ResourceMap {
+	return &ResourceMap{}
+}
+
+// Register maps an HTTP method + Gin route pattern to a resource+action pair.
+//
+//	rm.Register("GET", "/v1/filters", "filters", "list")
+//	rm.Register("POST", "/v1/filters", "filters", "create")
+//	rm.Register("GET", "/v1/filters/:id", "filters", "read")
+func (rm *ResourceMap) Register(httpMethod, routePattern, resource, action string) {
+	rm.entries = append(rm.entries, resourceEntry{
+		httpMethod:   httpMethod,
+		routePattern: routePattern,
+		resource:     resource,
+		action:       action,
+	})
+}
+
+// Resolve looks up the resource+action for a given HTTP method and route pattern.
+// Returns empty strings and false if no mapping is found.
+func (rm *ResourceMap) Resolve(httpMethod, routePattern string) (resource, action string, ok bool) {
+	for _, e := range rm.entries {
+		if e.httpMethod == httpMethod && e.routePattern == routePattern {
+			return e.resource, e.action, true
+		}
+	}
+	return "", "", false
 }
