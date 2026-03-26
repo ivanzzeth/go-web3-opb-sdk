@@ -50,31 +50,29 @@ func (c *Client) waitSignIn() {
 
 func (c *Client) signIn() (string, error) {
 	log.Println("signIn")
-	if c.ethPrivateKey != nil {
-		// Use SIWE to sign in again
-		nonce, err := c.SiweGetNonce()
-		if err != nil {
-			return "", err
-		}
-		// TODO: Configurable
-		message, err := siwe.InitMessage(c.domain, c.ethAddress.Hex(), c.authBaseURL(), nonce, map[string]interface{}{
-			"issuedAt":       time.Now().UTC().Format(time.RFC3339),
-			"expirationTime": time.Now().Add(5 * time.Minute).UTC().Format(time.RFC3339),
-		})
-		if err != nil {
-			return "", err
-		}
-		messageModel, err := c.SiweSignMessage(message)
-		if err != nil {
-			return "", err
-		}
-		siweAuthResult, err := c.SiweVerify(messageModel)
-		if err != nil {
-			return "", err
-		}
-		c.cachedJwtToken = siweAuthResult.Token
+	if c.ethPrivateKey == nil {
+		return "", fmt.Errorf("SIWE sign-in requires WithSIWE(privateKeyHex) — no ETH private key configured")
 	}
-
+	nonce, err := c.SiweGetNonce()
+	if err != nil {
+		return "", err
+	}
+	message, err := siwe.InitMessage(c.domain, c.ethAddress.Hex(), c.authBaseURL(), nonce, map[string]interface{}{
+		"issuedAt":       time.Now().UTC().Format(time.RFC3339),
+		"expirationTime": time.Now().Add(5 * time.Minute).UTC().Format(time.RFC3339),
+	})
+	if err != nil {
+		return "", err
+	}
+	messageModel, err := c.SiweSignMessage(message)
+	if err != nil {
+		return "", err
+	}
+	siweAuthResult, err := c.SiweVerify(messageModel)
+	if err != nil {
+		return "", err
+	}
+	c.cachedJwtToken = siweAuthResult.Token
 	return c.cachedJwtToken, nil
 }
 

@@ -26,6 +26,8 @@ type Client struct {
 	version       string
 	ethPrivateKey *ecdsa.PrivateKey
 	ethAddress    common.Address
+	clientID      string // OAuth2 client_id for service-to-service auth
+	clientSecret  string // OAuth2 client_secret for service-to-service auth
 	httpClient    *http.Client
 
 	mu             sync.Mutex
@@ -37,9 +39,26 @@ type Client struct {
 // Option configures the Client during construction.
 type Option func(*Client) error
 
-// WithAuth registers the auth service URL and sets the signing key.
-// This is required for any operation that needs authentication.
+// WithAuth registers the auth service URL and sets the SIWE signing key.
+// Deprecated: Use WithAuthService + WithSIWE or WithClientCredentials instead.
 func WithAuth(baseURL, privateKeyHex string) Option {
+	return func(c *Client) error {
+		if err := WithAuthService(baseURL)(c); err != nil {
+			return err
+		}
+		return WithSIWE(privateKeyHex)(c)
+	}
+}
+
+// WithAuthService registers the auth service base URL.
+// Use this when you only need to verify JWTs or call public auth endpoints.
+// No credentials required — suitable for downstream services that validate user tokens.
+//
+//	client, _ := web3opb.NewClient(
+//	    web3opb.WithAuthService("http://auth:8700"),
+//	)
+//	client.JwtVerify(token) // works without any credentials
+func WithAuthService(baseURL string) Option {
 	return func(c *Client) error {
 		if baseURL == "" {
 			return fmt.Errorf("auth baseURL is required")
@@ -47,6 +66,15 @@ func WithAuth(baseURL, privateKeyHex string) Option {
 		if _, err := url.Parse(baseURL); err != nil {
 			return fmt.Errorf("auth baseURL is invalid: %w", err)
 		}
+		c.services[ServiceAuth] = baseURL
+		return nil
+	}
+}
+
+// WithSIWE sets the ETH private key for SIWE (Sign-In with Ethereum) authentication.
+// Use this for user-facing clients that need to sign SIWE messages.
+func WithSIWE(privateKeyHex string) Option {
+	return func(c *Client) error {
 		if privateKeyHex == "" {
 			return fmt.Errorf("privateKeyHex is required")
 		}
@@ -54,9 +82,29 @@ func WithAuth(baseURL, privateKeyHex string) Option {
 		if err != nil {
 			return fmt.Errorf("privateKeyHex is invalid: %w", err)
 		}
-		c.services[ServiceAuth] = baseURL
 		c.ethPrivateKey = pk
 		c.ethAddress = crypto.PubkeyToAddress(pk.PublicKey)
+		return nil
+	}
+}
+
+// WithClientCredentials sets OAuth2 client_id and client_secret for service-to-service auth.
+// Use this for backend services that authenticate via project-scoped credentials (ADR-006).
+//
+//	client, _ := web3opb.NewClient(
+//	    web3opb.WithAuthService("http://auth:8700"),
+//	    web3opb.WithClientCredentials("w3opb_pk_xxx", "w3opb_sk_xxx"),
+//	)
+func WithClientCredentials(clientID, clientSecret string) Option {
+	return func(c *Client) error {
+		if clientID == "" {
+			return fmt.Errorf("clientID is required")
+		}
+		if clientSecret == "" {
+			return fmt.Errorf("clientSecret is required")
+		}
+		c.clientID = clientID
+		c.clientSecret = clientSecret
 		return nil
 	}
 }
@@ -112,10 +160,25 @@ func WithHTTPClient(hc *http.Client) Option {
 
 // NewClient creates a Client configured via functional options.
 //
+// Service-to-service (verify user JWTs, no signing):
+//
 //	client, err := web3opb.NewClient(
-//	    web3opb.WithAuth("https://auth.web3gate.xyz", privateKeyHex),
-//	    web3opb.WithDomain("evm-filter.web3gate.xyz"),
-//	    web3opb.WithService("notification", "https://notify.web3gate.xyz"),
+//	    web3opb.WithAuthService("http://auth:8700"),
+//	)
+//
+// Service-to-service with client credentials (ADR-006):
+//
+//	client, err := web3opb.NewClient(
+//	    web3opb.WithAuthService("http://auth:8700"),
+//	    web3opb.WithClientCredentials("w3opb_pk_xxx", "w3opb_sk_xxx"),
+//	)
+//
+// User-facing client (SIWE login):
+//
+//	client, err := web3opb.NewClient(
+//	    web3opb.WithAuthService("http://auth:8700"),
+//	    web3opb.WithSIWE(privateKeyHex),
+//	    web3opb.WithDomain("app.example.com"),
 //	)
 func NewClient(opts ...Option) (*Client, error) {
 	c := &Client{
@@ -144,4 +207,14 @@ func (c *Client) ServiceURL(name string) string {
 // authBaseURL is a convenience accessor used internally.
 func (c *Client) authBaseURL() string {
 	return c.ServiceURL(ServiceAuth)
+}
+
+// ClientID returns the OAuth2 client_id, or empty if not configured.
+func (c *Client) ClientID() string {
+	return c.clientID
+}
+
+// ClientSecret returns the OAuth2 client_secret, or empty if not configured.
+func (c *Client) ClientSecret() string {
+	return c.clientSecret
 }
