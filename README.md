@@ -12,12 +12,56 @@ go get github.com/ivanzzeth/go-web3-opb-sdk
 
 ## Quick Start
 
+### SIWE Authentication
+
 ```go
 client, _ := web3opb.NewClient(
-    web3opb.WithAuth("https://auth.example.com", "your-eth-private-key-hex"),
+    web3opb.WithAuthService("https://auth.example.com"),
+    web3opb.WithSIWE("your-eth-private-key-hex"),
     web3opb.WithDomain("your-app.example.com"),
 )
 
+// Login with SIWE
+result, _ := client.SiweLogin()
+client.SetCachedJwtToken(result.Token)
+```
+
+### Email + Password Authentication
+
+```go
+client, _ := web3opb.NewClient(
+    web3opb.WithAuthService("https://auth.example.com"),
+)
+
+// Register
+client.EmailRegister("user@example.com", "securepassword")
+
+// Verify email (token from email)
+client.EmailVerify("verification-token")
+
+// Login
+result, _ := client.EmailLogin("user@example.com", "securepassword")
+client.SetCachedJwtToken(result.Token)
+```
+
+### Account Binding
+
+```go
+// Bind another auth method to current user (requires authentication)
+
+// Bind SIWE wallet
+client.BindSIWE(siweMessage, signature)
+
+// Bind OAuth2 account
+client.BindOAuth2(authCode)
+
+// Bind email
+client.BindEmail("second@example.com", "password")
+```
+
+### Project Management
+
+```go
 // Create a project
 project, _ := client.CreateProject(&model.CreateProjectRequest{
     Name: "My App",
